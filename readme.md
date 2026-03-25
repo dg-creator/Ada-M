@@ -89,7 +89,29 @@ Dodatkowo w projekcie uwzględniono wykorzystanie modeli językowych (LLM), któ
 
 ## 3. Opis koncepcji case study
 
-...
+Celem demonstracji jest przedstawienie problemu nadmiernej liczby metryk w systemach mikroserwisowych oraz zaprezentowanie sposobu jego rozwiązania z wykorzystaniem funkcjonalności Adaptive Metrics w platformie Grafana.
+
+W ramach demo wykorzystana zostanie aplikacja OpenTelemetry Demo, uruchomiona w środowisku Kubernetes, która generuje dane telemetryczne w postaci metryk, logów oraz śladów. Generowane dane będą zbierane przez system Prometheus i wizualizowane w Grafana (Cloud).
+
+W pierwszym etapie demonstracji zaprezentowany zostanie problem wysokiej kardynalności metryk, wynikający z dużej liczby etykiet przypisanych do danych telemetrycznych. Taka sytuacja prowadzi do zwiększonego zużycia zasobów oraz utrudnia analizę danych w systemach monitoringu.
+
+Następnie przedstawione zostanie działanie mechanizmu Adaptive Metrics, który analizuje sposób wykorzystania metryk w systemie (dashboardy, zapytania, alerty) oraz sugeruje ich optymalizację poprzez agregację i redukcję zbędnych etykiet.
+
+Istotnym elementem demonstracji jest zaprezentowane porównania stanu systemu przed i po zastosowaniu rekomendacji Adaptive Metrics. Analizie podlegać będzie liczba metryk, ich czytelność oraz efektywność wykorzystania.
+
+Końcowa część demonstracji prezentuje użyciu modelu językowego (LLM), który za pośrednictwem warstwy MCP pełni rolę inteligentnej warstwy analitycznej. Model umożliwia interpretację danych telemetrycznych oraz rekomendacji Adaptive Metrics w sposób zrozumiały dla użytkownika, wspierając proces podejmowania decyzji dotyczących optymalizacji metryk.
+
+Scenariusz demonstracji obejmuje następujące kroki:
+1. Uruchomienie aplikacji oraz generowanie ruchu w systemie.
+2. Zbieranie i wizualizacja metryk w Grafanie.
+3. Identyfikacja problemu wysokiej kardynalności metryk.
+4. Analiza rekomendacji Adaptive Metrics.
+5. Zastosowanie optymalizacji metryk.
+6. Porównanie wyników przed i po optymalizacji.
+7. Interpretacja wyników z wykorzystaniem modelu LLM.
+
+![Prosty diagram architektury](images/case_study_diagram.png)
+*Rys. 4: Koncepcyjny schemat architektury do demonstracji*
 
 ---
 
