@@ -117,7 +117,11 @@ Scenariusz demonstracji obejmuje następujące kroki:
 
 ## 4. Architektura wysokopoziomowa
 
-...
+W celu przedstawienia ogólnej koncepcji rozwiązania opracowano architekturę wysokopoziomową, która ilustruje główne komponenty systemu oraz przepływ danych pomiędzy nimi. Diagram koncentruje się na kluczowych warstwach odpowiedzialnych za generowanie, przetwarzanie, wizualizację oraz interpretację danych obserwowalności.
+
+![Architektura systemu](images/high_level_diagram.png)
+
+*Rys. 5: Architektura wysokopoziomowa systemu observability z warstwą interpretacji opartą o LLM.*
 
 ---
 
