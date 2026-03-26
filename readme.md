@@ -36,7 +36,7 @@ W odpowiedzi na te wyzwania rozwijane są narzędzia takie jak Grafana wraz z fu
 Dodatkowo zastosowanie modeli językowych (LLM) pozwala na automatyczną analizę danych oraz wspomaganie użytkownika w procesie diagnostyki, umożliwiając bardziej intuicyjną interakcję z systemem.
 
 ![Adaptive Metrics Overview](https://github.com/dg-creator/Ada-M/blob/main/images/adaptive-metrics-overview.png)
-*Rys. 1: Adaptive Metrics Overview*
+*Rys. 1: Przegląd metryk adaptacyjnych*
 
 ---
 
@@ -52,7 +52,7 @@ Podstawowymi elementami obserwowalności są:
 Połączenie tych elementów pozwala na pełniejsze zrozumienie zachowania systemu oraz znacząco przyspiesza proces identyfikacji i rozwiązywania problemów.
 
 ![Observability pillars](https://github.com/dg-creator/Ada-M/blob/main/images/observability-pillars.png)
-*Rys. 2: Observability pillars*
+*Rys. 2: Filary obserwowalności*
 
 Przykładem narzędzia wykorzystywanego w ramach obserwowalności jest **Prometheus**, który realizuje model typu *pull*. Jego zadaniem jest cykliczne zbieranie metryk z monitorowanych usług poprzez dedykowane endpointy, najczęściej dostępne pod adresem /metrics. Zebrane dane są następnie przechowywane w bazie szeregów czasowych (TSDB) i mogą być analizowane przy użyciu języka zapytań PromQL. Prometheus integruje się również z systemami wizualizacji, takimi jak Grafana, umożliwiając prezentację danych w formie dashboardów.
 
@@ -118,7 +118,7 @@ W celu przedstawienia ogólnej koncepcji rozwiązania opracowano architekturę w
 
 ![Architektura systemu](images/high_level_diagram.png)
 
-*Rys. 4: Architektura wysokopoziomowa systemu observability z warstwą interpretacji opartą o LLM.*
+*Rys. 4: Architektura wysokopoziomowa systemu obserwowalności z warstwą interpretacji opartą o LLM*
 
 ---
 
