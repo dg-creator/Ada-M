@@ -36,7 +36,7 @@ W odpowiedzi na te wyzwania rozwijane są narzędzia takie jak Grafana wraz z fu
 Dodatkowo zastosowanie modeli językowych (LLM) pozwala na automatyczną analizę danych oraz wspomaganie użytkownika w procesie diagnostyki, umożliwiając bardziej intuicyjną interakcję z systemem.
 
 ![Adaptive Metrics Overview](https://github.com/dg-creator/Ada-M/blob/main/images/adaptive-metrics-overview.png)
-*Rys. 1: Przegląd metryk adaptacyjnych*
+*Rys. 1: Przegląd Adaptive Metrics*
 
 ---
 
