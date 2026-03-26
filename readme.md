@@ -110,9 +110,6 @@ Scenariusz demonstracji obejmuje następujące kroki:
 6. Porównanie wyników przed i po optymalizacji.
 7. Interpretacja wyników z wykorzystaniem modelu LLM.
 
-![Prosty diagram architektury](images/case_study_diagram.png)
-*Rys. 4: Koncepcyjny schemat architektury do demonstracji*
-
 ---
 
 ## 4. Architektura wysokopoziomowa
@@ -121,7 +118,7 @@ W celu przedstawienia ogólnej koncepcji rozwiązania opracowano architekturę w
 
 ![Architektura systemu](images/high_level_diagram.png)
 
-*Rys. 5: Architektura wysokopoziomowa systemu observability z warstwą interpretacji opartą o LLM.*
+*Rys. 4: Architektura wysokopoziomowa systemu observability z warstwą interpretacji opartą o LLM.*
 
 ---
 
