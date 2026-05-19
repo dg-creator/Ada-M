@@ -124,7 +124,27 @@ W celu przedstawienia ogólnej koncepcji rozwiązania opracowano architekturę w
 
 ## 5. Architektura szczegółowa
 
-...
+W poprzednim rozdziale przedstawiono ogólny zarys systemu, podzielony na cztery warstwy: aplikację generującą metryki, system obserwowalności zbierający te metryki, warstwę wizualizacji opartą o Grafana Cloud oraz warstwę interpretacji wykorzystującą model językowy. W tym rozdziale każda z tych warstw zostaje rozłożona na konkretne komponenty - opisujemy, z czego są zbudowane, w jaki sposób są wdrażane oraz jak dane przepływają pomiędzy nimi.
+
+## 5.1 Warstwa aplikacyjna
+ 
+Warstwa aplikacyjna jest punktem startowym całego przepływu danych w systemie. To tutaj powstają metryki, logi i ślady, które następnie są zbierane, przesyłane do chmury i analizowane. W tej roli wykorzystano **OpenTelemetry Demo**, znaną również pod nazwą Astronomy Shop. Jest to oficjalna aplikacja demonstracyjna utrzymywana przez społeczność OpenTelemetry, której celem jest pokazanie, jak instrumentacja telemetryczna wygląda w praktyce, w realistycznym, rozproszonym środowisku [1]. Aplikacja prezentuje sklep internetowy sprzedający akcesoria astronomiczne i została celowo zbudowana tak, by przypominać systemy spotykane w rzeczywistych firmach.
+
+### 5.1.1 Z czego składa się aplikacja
+ 
+OpenTelemetry Demo jest zbiorem kilkunastu mikroserwisów, z których każdy odpowiada za fragment funkcjonalności sklepu. Tym, co czyni tę aplikację szczególnie wartościową dla celów demonstracyjnych, jest jej różnorodność technologiczna. Poszczególne usługi napisane są w różnych językach programowania (TypeScript, Go, Python, Java, .NET, Rust, Ruby, PHP, C++, Kotlin i innych), a komunikują się ze sobą przez gRPC oraz HTTP [2]. Dzięki temu odzwierciedla rzeczywistą sytuację w wielu firmach, gdzie różne zespoły używają różnych technologii.
+ 
+Sercem aplikacji jest usługa `frontend` napisana w TypeScript, która odpowiada za interfejs sklepu widoczny w przeglądarce. Wszystkie żądania trafiają najpierw do `frontend-proxy` opartego o serwer Envoy — pełni on rolę bramki wejściowej do systemu. Za frontendem znajdują się usługi domenowe związane z procesem zakupowym: `product-catalog` (Go) udostępnia katalog produktów, `cart` (.NET) zarządza koszykiem, `checkout` (Go) realizuje proces zamówienia, `payment` (JavaScript) obsługuje płatności, a `shipping` (Rust) zajmuje się wysyłką.
+ 
+Wokół tego rdzenia funkcjonalnego krążą usługi wspomagające. `recommendation` (Python) dobiera rekomendowane produkty, `ad` (Java) wyświetla reklamy, `currency` (C++) przelicza waluty, `quote` (PHP) generuje wyceny wysyłki, a `email` (Ruby) wysyła potwierdzenia zamówień. Osobną grupę stanowią usługi przetwarzania zdarzeń - `fraud-detection` (Kotlin) analizuje zamówienia pod kątem oszustw, a `accounting` (.NET) zajmuje się księgowaniem.
+ 
+Aby aplikacja generowała ruch nawet bez udziału użytkownika, w jej skład wchodzi `load-generator` — generator obciążenia oparty o narzędzie Locust, który symuluje zachowania użytkowników (przeglądanie produktów, dodawanie do koszyka, finalizowanie zakupów). Ponadto występuje `flagd`, czyli usługa zarządzająca flagami funkcjonalności. Pozwala ona w trakcie działania systemu włączać i wyłączać określone zachowania, w tym celowo wywoływać awarie.
+ 
+Aplikacja korzysta także z infrastruktury wspierającej: pamięci podręcznej Valkey (zamiennik Redisa), kolejki komunikatów Kafka oraz bazy danych PostgreSQL. Te komponenty również generują własne metryki, które trafiają do systemu obserwowalności.
+
+![Architektura OpenTelemetry Demo](images/demo_diagram.png)
+
+*Rys. 5: Architektura demonstracyjna OpenTelemetry Demo* 
 
 ---
 
@@ -183,8 +203,10 @@ W celu przedstawienia ogólnej koncepcji rozwiązania opracowano architekturę w
 ---
 
 ## 11. Literatura
+[1] OpenTelemetry Demo - Repozytorium GitHub. https://github.com/open-telemetry/opentelemetry-demo, data dostępu: 19.05.2026.
+[2] OpenTelemetry Demo - Demo Architecture. https://opentelemetry.io/docs/demo/architecture/, data dostępu: 19.05.2026.
 
-...
 
 ---
+
 
