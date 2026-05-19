@@ -488,14 +488,14 @@ Jako środowisko uruchomieniowe wybrano minikube — lokalną dystrybucję Kuber
 ---
 
 ## 11. Literatura
-[1] OpenTelemetry Demo - Repozytorium GitHub. https://github.com/open-telemetry/opentelemetry-demo, data dostępu: 19.05.2026.
-[2] OpenTelemetry Demo - Architecture. https://opentelemetry.io/docs/demo/architecture/, data dostępu: 19.05.2026.
-[3] Grafana Cloud — Integration methods for Prometheus metrics. https://grafana.com/docs/grafana-cloud/send-data/metrics/metrics-prometheus/prometheus-config-examples/integration-guide/, data dostępu: 19.05.2026.
-[4] Grafana Mimir —  Introduction. https://grafana.com/docs/mimir/latest/introduction/, data dostępu: 19.05.2026.
-[5] Grafana Labs — How to aggregate metrics but retain critical data: Introducing Exemptions in Adaptive Metrics. https://grafana.com/blog/how-to-aggregate-metrics-but-retain-critical-data-introducing-exemptions-in-adaptive-metrics/, data dostępu: 19.05.2026.
-[6] Grafana Labs — Introducing Adaptive Metrics. https://grafana.com/blog/adaptive-metrics-grafana-cloud-announcement/, data dostępu: 19.05.2026.
-[7] Mcp-grafana — Repozytorium GitHub. https://github.com/grafana/mcp-grafana, data dostępu: 19.05.2026.
-[8] SigNoz — Kubernetes Observability with OpenTelemetry. https://signoz.io/blog/kubernetes-observability-with-opentelemetry/, data dostępu: 19.05.2026.
+[1] OpenTelemetry Demo - Repozytorium GitHub. https://github.com/open-telemetry/opentelemetry-demo, data dostępu: 19.05.2026.\
+[2] OpenTelemetry Demo - Architecture. https://opentelemetry.io/docs/demo/architecture/, data dostępu: 19.05.2026.\
+[3] Grafana Cloud — Integration methods for Prometheus metrics. https://grafana.com/docs/grafana-cloud/send-data/metrics/metrics-prometheus/prometheus-config-examples/integration-guide/, data dostępu: 19.05.2026.\
+[4] Grafana Mimir —  Introduction. https://grafana.com/docs/mimir/latest/introduction/, data dostępu: 19.05.2026.\
+[5] Grafana Labs — How to aggregate metrics but retain critical data: Introducing Exemptions in Adaptive Metrics. https://grafana.com/blog/how-to-aggregate-metrics-but-retain-critical-data-introducing-exemptions-in-adaptive-metrics/, data dostępu: 19.05.2026.\
+[6] Grafana Labs — Introducing Adaptive Metrics. https://grafana.com/blog/adaptive-metrics-grafana-cloud-announcement/, data dostępu: 19.05.2026.\
+[7] Mcp-grafana — Repozytorium GitHub. https://github.com/grafana/mcp-grafana, data dostępu: 19.05.2026.\
+[8] SigNoz — Kubernetes Observability with OpenTelemetry. https://signoz.io/blog/kubernetes-observability-with-opentelemetry/, data dostępu: 19.05.2026.\
 [9] MyCloudJourney — Monitoring Kubernetes Cluster with Datadog (Minikube + OpenTelemetry Demo). https://www.wallacel.com/index.php/2025/09/20/monitoring-kubernetes-with-datadog-minikube-otel-demo/, data dostępu: 19.05.2026.
 
 ---
