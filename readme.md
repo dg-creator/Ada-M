@@ -452,12 +452,13 @@ Przed rozpoczęciem instalacji na hoście muszą znajdować się następujące n
 * **k3d** (lub **kind** wewnątrz Docker Desktop): Narzędzie do tworzenia wysoce wydajnych, lokalnych klastrów Kubernetes wewnątrz kontenerów Docker.
 * **kubectl:** Oficjalne narzędzie CLI do zarządzania klastrem Kubernetes.
 * **Helm (v3):** Menedżer pakietów dla systemu Kubernetes, niezbędny do wdrożenia OpenTelemetry Demo.
-* **Node.js (v18+) & npm** (lub Python 3.10+): W zależności od preferencji uruchomienia serwera `mcp-grafana`.
+* **uv**: Uruchomienie serwer MCP Grafany (https://docs.astral.sh/uv/getting-started/installation/).
+* **Claude Desktop**: Narzędzie AI wykorzystujące serwer MCP (https://claude.com/download).
 
 ### 6.4 Konta i dostępy zewnętrzne
 Demonstracja opiera się na integracji z zewnętrznymi usługami SaaS:
 * **Konto Grafana Cloud (Free Tier):** Wymagane do uzyskania dostępu do zarządzanej bazy danych Grafana Mimir, modułu wizualizacji oraz funkcjonalności Adaptive Metrics.
-* **Konto OpenAI (API Key) lub darmowa alternatywa (np. Anthropic / Ollama):** Klucz API niezbędny dla klienta LLM do komunikacji z modelem językowym wspierającym protokół MCP.
+* **Konto Anthropic** niezbędny dla klienta LLM do komunikacji z modelem językowym wspierającym protokół MCP.
 
 ### 6.5 Struktura sieciowa
 Komunikacja w systemie podzielona jest na trzy główne warstwy sieciowe:
@@ -470,13 +471,12 @@ Komunikacja w systemie podzielona jest na trzy główne warstwy sieciowe:
 ### 6.6 Repozytorium projektu
 Struktura katalogów w repozytorium konfiguracyjnym kształtuje się następująco:
 ```text
-ada-m-project/
+Ada-M-project/
 ├── kubernetes/
-│   ├── otel-demo-values.yaml    # Plik konfiguracyjny Helm dla OpenTelemetry Demo
-│   └── prometheus-config.yaml   # ConfigMap nadpisujący parametry remote_write Prometheusa
+│   ├── values.yaml    # Plik konfiguracyjny Helm dla OpenTelemetry Demo z remote_write Prometheusa
 ├── mcp/
-│   └── .env.example             # Szablon zmiennych środowiskowych dla MCP Servera
-└── readme.md                    # Dokumentacja główna projektu
+│   └── claude_desktop_config.json  # Konfiguracja serwera MCP dla Claude Desktop
+└── readme.md                       # Dokumentacja główna projektu
 ```
 
 ---
@@ -557,45 +557,34 @@ kubectl get pods
 
 Zweryfikuj czy do Grafany Cloud dochodzą metryki z Prometheus uruchamiając Grafana Cloud na naszego stacku. Następnie w panelu przechodząc na `Drilldown > Metrics` powinniśmy zobaczyć metryki obserwując datasource: `grafanacloud-<stack>-prom`.
 
-**Krok 4**: Konfiguracja i uruchomienie Grafana MCP Server
+**Krok 4**: Konfiguracja i uruchomienie Grafana MCP Server oraz podłączenie klienta LLM (Claude Desktop)
 
-```bash
-cd mcp/
-npm install
-```
+Najprostszym sposobem jest instalacja narzędzia **Claude Code**.
 
-Utwórz plik `.env` na podstawie szablonu i uzupełnij go o token dostępu do swojej instancji Grafana Cloud oraz klucz API dostawcy modelu językowego:
-
-```bash
-GRAFANA_URL=https://<TWOJA_DOMENA_GRAFANA_CLOUD>.grafana.net
-GRAFANA_TOKEN=<TWÓJ_SERVICE_ACCOUNT_LUB_CLOUD_TOKEN>
-OPENAI_API_KEY=sk-proj-...
-```
-
-Uruchom serwer MCP w trybie nasłuchiwania:
-
-```bash
-npm run start
-```
-
-**Krok 5**: Podłączenie klienta LLM (np. ChatGPT / Claude Desktop)
-
-Skonfiguruj swojego klienta LLM (np. poprzez konfigurację aplikacji Claude Desktop lub dedykowany skrypt uruchomieniowy OpenAI), wskazując lokalny serwer MCP jako źródło narzędzi context-aware:
+Wewnątrz aplikacji otwieramy nawigację na pasku po lewej stronie na górze > File > Settings.
+Otwieramy Developer > Open configuration file (`claude_desktop_config.json`).
+Dodajemy następującą konfigurację (szablon `mcp/claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
-    "mcp-grafana": {
-      "command": "node",
-      "args": ["/sciezka/do/ada-m-project/mcp/build/index.js"],
+    "grafana": {
+      "command": "uvx",
+      "args": ["mcp-grafana"],
       "env": {
-        "GRAFANA_URL": "https://<TWOJA_DOMENA_GRAFANA_CLOUD>.grafana.net",
-        "GRAFANA_TOKEN": "<TWÓJ_TOKEN>"
+        "GRAFANA_URL": "https://<stack>.grafana.net",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN": "<token>"
       }
     }
   }
 }
 ```
+
+Do zdobycia tokenu potrzebujemy stworzyć uprawnienie dla LLM.
+Wchodzimy na panel Grafana Cloud naszego stacku. Administation > Users and access > Service accounts > Add service account.
+Dodajemy `mcp-server-token` z rolą `Viewer`. Wewnątrz grupy naciskamy `+ Add service account token`, generujemy token i kopiujemy do powyższego pliku `claude_desktop_config.json`. Uzupełniamy również nazwę naszego stacku.
+
+Restartujemy aplikację Claude Desktop.
 
 Od tego momentu model LLM ma bezpośredni wgląd w metryki zbierane z Twojego lokalnego klastra k3d/kind i przesyłane do Grafana Cloud, umożliwiając przejście do scenariusza testowego.
 
