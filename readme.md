@@ -487,10 +487,31 @@ Wdrożenie projektu należy przeprowadzić w ściśle określonej kolejności, a
 
 **Krok 1**: Przygotowanie klastra lokalnego (k3d lub kind)
 
+Instalacja narzędzia k3d odbywa się poleceniem:
+
+```bash
+curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.8.3 bash
+```
+
 W przypadku korzystania z k3d, utwórz klaster poleceniem:
 
 ```bash
 k3d cluster create ada-m-cluster --api-port 6550 -p "8080:80@loadbalancer" --agents 2
+```
+
+Uwaga! Do tego polecenia wymagane jest uruchomione środowisko Docker Desktop.
+
+`kubectl` powinien automatycznie podłączyć się do nowo utworzonego klastra.
+
+W celu upewnienia się, że klaster uruchomił się, użyj polecenia: `kubectl get nodes`.
+
+W przypadku, gdy uruchomiliśmy klaster przez WSL. Możemy skonfigurować `kubectl` w windowsie:
+
+```powershell
+# Stworzenie katalogu jeśli taki nie istnieje
+New-Item -ItemType Directory -Force -Path "$HOME\.kube"
+Get-Content -Raw \\wsl$\\<nazwa_dystrybucji, np. Ubuntu>\\home\\<nazwa_użytkownika>\\.kube\\config | Set-Content "$HOME\\.kube\\config"
+kubectl get nodes
 ```
 
 Alternatywnie wewnątrz aplikacji Docker Desktop w ustawieniach Kubernetes, można uruchomić klaster przez interfejs używając Kubeadm lub kind.
@@ -498,26 +519,23 @@ Alternatywnie wewnątrz aplikacji Docker Desktop w ustawieniach Kubernetes, moż
 **Krok 2**: Konfiguracja konta Grafana Cloud
 
 1. Załóż lub zaloguj się na swoje konto Grafana Cloud.
-2. Przejdź do zakładki Details w sekcji Prometheus.
-3. Skopiuj wartości: URL (Remote Write Endpoint), Username (Instance ID) oraz wygeneruj token dostępu (Cloud Access Policy Token).
+2. Wybierz swój stack, znajdź Prometheus i wybierz `Send Metrics`
+3. Przejdź do sekcji `Sending metrics with Prometheus`. Wygeneruj token przyciskiem `Generate now`
+4. Skopiuj zawartość pola. Dane te będą potrzebne do następnego punktu.
 
 **Krok 3**: Dostosowanie konfiguracji i instalacja OpenTelemetry Demo
 
 Wbudowany w OpenTelemetry Demo Prometheus musi zostać poinstruowany, aby przesyłał dane do Grafana Cloud.
-W pliku `kubernetes/otel-demo-values.yaml` należy zmodyfikować sekcję odpowiedzialną za konfigurację serwera Prometheus, dodając parametry `remote_write`:
+W pliku `kubernetes/values.yaml` należy zmodyfikować sekcję odpowiedzialną za konfigurację serwera Prometheus, dodając parametry `remote_write`. Wklej dane do tego pliku (linia 1128):
 
 ```yaml
 prometheus:
   server:
-    persistentVolume:
-      enabled: false
-    global:
-      scrape_interval: 15s
     remoteWrite:
-      - url: "https://<TWÓJ_ENDPOINT_GRAFANA_CLOUD>/api/v1/push"
-        basicAuth:
-          username: "<TWÓJ_INSTANCE_ID>"
-          password: "<TWÓJ_TOKEN_ACCESS_POLICY>"
+      - url: https://<PASTE_DATA>/api/prom/push
+        basic_auth:
+          username: <PASTE_DATA>
+          password: <PASTE_DATA>
 ```
 
 Dodaj oficjalne repozytorium Helm OpenTelemetry i zainstaluj aplikację demo z przygotowanymi wartościami:
@@ -528,7 +546,7 @@ helm repo update
 ```
 
 ```bash
-helm install ada-m-demo open-telemetry/opentelemetry-demo -f kubernetes/otel-demo-values.yaml
+helm install ada-m-demo open-telemetry/opentelemetry-demo -f kubernetes/values.yaml
 ```
 
 Zweryfikuj poprawność uruchomienia wszystkich podów (proces może potrwać kilka minut):
@@ -536,6 +554,8 @@ Zweryfikuj poprawność uruchomienia wszystkich podów (proces może potrwać ki
 ```bash
 kubectl get pods
 ```
+
+Zweryfikuj czy do Grafany Cloud dochodzą metryki z Prometheus uruchamiając Grafana Cloud na naszego stacku. Następnie w panelu przechodząc na `Drilldown > Metrics` powinniśmy zobaczyć metryki obserwując datasource: `grafanacloud-<stack>-prom`.
 
 **Krok 4**: Konfiguracja i uruchomienie Grafana MCP Server
 
