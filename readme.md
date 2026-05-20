@@ -435,13 +435,149 @@ Jako środowisko uruchomieniowe wybrano minikube — lokalną dystrybucję Kuber
 
 ## 6. Opis środowiska
 
-...
+Środowisko testowe i demonstracyjne zostało zaprojektowane z myślą o lokalnym uruchomieniu na stacji roboczej (hoście), przy jednoczesnym zachowaniu pełnej separacji komponentów dzięki konteneryzacji oraz architekturze chmurowej w modelu hybrydowym.
+
+### 6.1 Wymagania sprzętowe hosta
+Uruchomienie kompletnego stosu OpenTelemetry Demo wraz z lokalnym klastrem Kubernetes oraz serwerem MCP wymaga maszyn o odpowiednich zasobach:
+* **Procesor (CPU):** Minimum 4 rdzenie fizyczne (zalecane 6 lub więcej z obsługą wirtualizacji).
+* **Pamięć RAM:** Minimum 16 GB (OpenTelemetry Demo składa się z kilkunastu mikroserwisów, bazy PostgreSQL, Kafki i Valkey, co generuje stałe obciążenie pamięciowe).
+* **Dysk twardy:** Minimum 30 GB wolnej przestrzeni dyskowej (Zalecany dysk SSD ze względu na operacje I/O bazy Prometheus oraz logów Dockera).
+
+### 6.2 Wymagania systemowe
+* **System operacyjny:** Linux (Ubuntu 22.04 LTS lub nowszy), macOS (13.0 Ventura lub nowszy) lub Windows 11 z zainstalowanym i aktywnym środowiskiem WSL2 (Windows Subsystem for Linux).
+
+### 6.3 Wymagane oprogramowanie
+Przed rozpoczęciem instalacji na hoście muszą znajdować się następujące narzędzia:
+* **Docker Engine / Docker Desktop:** Środowisko uruchomieniowe kontenerów.
+* **k3d** (lub **kind** wewnątrz Docker Desktop): Narzędzie do tworzenia wysoce wydajnych, lokalnych klastrów Kubernetes wewnątrz kontenerów Docker.
+* **kubectl:** Oficjalne narzędzie CLI do zarządzania klastrem Kubernetes.
+* **Helm (v3):** Menedżer pakietów dla systemu Kubernetes, niezbędny do wdrożenia OpenTelemetry Demo.
+* **Node.js (v18+) & npm** (lub Python 3.10+): W zależności od preferencji uruchomienia serwera `mcp-grafana`.
+
+### 6.4 Konta i dostępy zewnętrzne
+Demonstracja opiera się na integracji z zewnętrznymi usługami SaaS:
+* **Konto Grafana Cloud (Free Tier):** Wymagane do uzyskania dostępu do zarządzanej bazy danych Grafana Mimir, modułu wizualizacji oraz funkcjonalności Adaptive Metrics.
+* **Konto OpenAI (API Key) lub darmowa alternatywa (np. Anthropic / Ollama):** Klucz API niezbędny dla klienta LLM do komunikacji z modelem językowym wspierającym protokół MCP.
+
+### 6.5 Struktura sieciowa
+Komunikacja w systemie podzielona jest na trzy główne warstwy sieciowe:
+1.  **Sieć wewnętrzna klastra (Pod Network):** Izolowana sieć w k3d/kind, w której mikroserwisy komunikują się przez protokoły gRPC/HTTP. OTel Collector zbiera dane i przekazuje je lokalnym endpointem OTLP (`http://prometheus:4317`) do Prometheusa.
+2.  **Sieć Hosta (Localhost):** Umożliwia mapowanie portów z klastra na system operacyjny użytkownika. Serwer MCP uruchomiony na hoście komunikuje się lokalnie z klientem LLM.
+3.  **Sieć zewnętrzna (WAN):** Szyfrowane połączenia wychodzące z hosta i klastra:
+    * Z lokalnego Prometheusa do endpointu `remote_write` w Grafana Cloud za pomocą protokołu HTTPS (port 443).
+    * Z lokalnego serwera MCP do API Grafana Cloud oraz API dostawcy LLM.
+
+### 6.6 Repozytorium projektu
+Struktura katalogów w repozytorium konfiguracyjnym kształtuje się następująco:
+```text
+ada-m-project/
+├── kubernetes/
+│   ├── otel-demo-values.yaml    # Plik konfiguracyjny Helm dla OpenTelemetry Demo
+│   └── prometheus-config.yaml   # ConfigMap nadpisujący parametry remote_write Prometheusa
+├── mcp/
+│   └── .env.example             # Szablon zmiennych środowiskowych dla MCP Servera
+└── readme.md                    # Dokumentacja główna projektu
+```
 
 ---
 
 ## 7. Metoda instalacji
 
-...
+Wdrożenie projektu należy przeprowadzić w ściśle określonej kolejności, aby zapewnić prawidłowy przepływ danych ze środowiska lokalnego do chmury i warstwy analitycznej LLM.
+
+**Krok 1**: Przygotowanie klastra lokalnego (k3d lub kind)
+
+W przypadku korzystania z k3d, utwórz klaster poleceniem:
+
+```bash
+k3d cluster create ada-m-cluster --api-port 6550 -p "8080:80@loadbalancer" --agents 2
+```
+
+Alternatywnie wewnątrz aplikacji Docker Desktop w ustawieniach Kubernetes, można uruchomić klaster przez interfejs używając Kubeadm lub kind.
+
+**Krok 2**: Konfiguracja konta Grafana Cloud
+
+1. Załóż lub zaloguj się na swoje konto Grafana Cloud.
+2. Przejdź do zakładki Details w sekcji Prometheus.
+3. Skopiuj wartości: URL (Remote Write Endpoint), Username (Instance ID) oraz wygeneruj token dostępu (Cloud Access Policy Token).
+
+**Krok 3**: Dostosowanie konfiguracji i instalacja OpenTelemetry Demo
+
+Wbudowany w OpenTelemetry Demo Prometheus musi zostać poinstruowany, aby przesyłał dane do Grafana Cloud.
+W pliku `kubernetes/otel-demo-values.yaml` należy zmodyfikować sekcję odpowiedzialną za konfigurację serwera Prometheus, dodając parametry `remote_write`:
+
+```yaml
+prometheus:
+  server:
+    persistentVolume:
+      enabled: false
+    global:
+      scrape_interval: 15s
+    remoteWrite:
+      - url: "https://<TWÓJ_ENDPOINT_GRAFANA_CLOUD>/api/v1/push"
+        basicAuth:
+          username: "<TWÓJ_INSTANCE_ID>"
+          password: "<TWÓJ_TOKEN_ACCESS_POLICY>"
+```
+
+Dodaj oficjalne repozytorium Helm OpenTelemetry i zainstaluj aplikację demo z przygotowanymi wartościami:
+
+```bash
+helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+helm repo update
+```
+
+```bash
+helm install ada-m-demo open-telemetry/opentelemetry-demo -f kubernetes/otel-demo-values.yaml
+```
+
+Zweryfikuj poprawność uruchomienia wszystkich podów (proces może potrwać kilka minut):
+
+```bash
+kubectl get pods
+```
+
+**Krok 4**: Konfiguracja i uruchomienie Grafana MCP Server
+
+```bash
+cd mcp/
+npm install
+```
+
+Utwórz plik `.env` na podstawie szablonu i uzupełnij go o token dostępu do swojej instancji Grafana Cloud oraz klucz API dostawcy modelu językowego:
+
+```bash
+GRAFANA_URL=https://<TWOJA_DOMENA_GRAFANA_CLOUD>.grafana.net
+GRAFANA_TOKEN=<TWÓJ_SERVICE_ACCOUNT_LUB_CLOUD_TOKEN>
+OPENAI_API_KEY=sk-proj-...
+```
+
+Uruchom serwer MCP w trybie nasłuchiwania:
+
+```bash
+npm run start
+```
+
+**Krok 5**: Podłączenie klienta LLM (np. ChatGPT / Claude Desktop)
+
+Skonfiguruj swojego klienta LLM (np. poprzez konfigurację aplikacji Claude Desktop lub dedykowany skrypt uruchomieniowy OpenAI), wskazując lokalny serwer MCP jako źródło narzędzi context-aware:
+
+```json
+{
+  "mcpServers": {
+    "mcp-grafana": {
+      "command": "node",
+      "args": ["/sciezka/do/ada-m-project/mcp/build/index.js"],
+      "env": {
+        "GRAFANA_URL": "https://<TWOJA_DOMENA_GRAFANA_CLOUD>.grafana.net",
+        "GRAFANA_TOKEN": "<TWÓJ_TOKEN>"
+      }
+    }
+  }
+}
+```
+
+Od tego momentu model LLM ma bezpośredni wgląd w metryki zbierane z Twojego lokalnego klastra k3d/kind i przesyłane do Grafana Cloud, umożliwiając przejście do scenariusza testowego.
 
 ---
 
