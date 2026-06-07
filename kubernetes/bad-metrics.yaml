@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: high-cardinality-exporter-code
+data:
+  server.py: |
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    import random
+    import time
+
+    series = {}
+    routes = ["/api/products", "/api/cart", "/api/checkout", "/api/reviews", "/api/recommendations"]
+    statuses = ["200", "400", "500"]
+
+    SERIES_PER_SCRAPE = 80
+    MAX_SERIES = 10000
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path != "/metrics":
+                self.send_response(404)
+                self.end_headers()
+                return
+
+            for _ in range(SERIES_PER_SCRAPE):
+                if len(series) >= MAX_SERIES:
+                    break
+
+                user_id = f"user-{random.randint(1, 5000)}"
+                session_id = f"session-{random.randint(1, 20000)}"
+                product_id = f"product-{random.randint(1, 1000)}"
+                route = random.choice(routes)
+                status = random.choice(statuses)
+                method = "GET" if route in ["/api/products", "/api/recommendations"] else "POST"
+
+                key = (user_id, session_id, product_id, route, status, method)
+                series[key] = series.get(key, 0) + random.randint(1, 5)
+
+            body = []
+            body.append("# HELP bad_requests_total Artificial high-cardinality request counter")
+            body.append("# TYPE bad_requests_total counter")
+
+            for (user_id, session_id, product_id, route, status, method), value in series.items():
+                body.append(
+                    f'bad_requests_total{{user_id="{user_id}",session_id="{session_id}",product_id="{product_id}",route="{route}",status="{status}",method="{method}"}} {value}'
+                )
+
+            output = "\n".join(body) + "\n"
+
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; version=0.0.4")
+            self.end_headers()
+            self.wfile.write(output.encode())
+
+    HTTPServer(("0.0.0.0", 8000), Handler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: high-cardinality-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: high-cardinality-exporter
+  template:
+    metadata:
+      labels:
+        app: high-cardinality-exporter
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8000"
+    spec:
+      containers:
+        - name: exporter
+          image: python:3.12-slim
+          command: ["python", "/app/server.py"]
+          ports:
+            - containerPort: 8000
+          volumeMounts:
+            - name: code
+              mountPath: /app
+      volumes:
+        - name: code
+          configMap:
+            name: high-cardinality-exporter-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: high-cardinality-exporter
+spec:
+  selector:
+    app: high-cardinality-exporter
+  ports:
+    - name: metrics
+      port: 8000
+      targetPort: 8000

@@ -592,21 +592,42 @@ Od tego momentu model LLM ma bezpośredni wgląd w metryki zbierane z Twojego lo
 
 ## 8. Kroki wdrożenia demo
 
-...
+Po zakończeniu instalacji środowiska opisanej w poprzednim rozdziale należy przygotować dane umożliwiające demonstrację problemu wysokiej kardynalności metryk oraz działania mechanizmu Adaptive Metrics.
 
----
+### 8.1 Przygotowanie ruchu aplikacyjnego
 
-### 8.1 Konfiguracja
+Po uruchomieniu OpenTelemetry Demo należy wygenerować ruch użytkowników w systemie. Wbudowany komponent Load Generator automatycznie symuluje zachowanie klientów sklepu internetowego, generując żądania HTTP pomiędzy mikroserwisami.
 
-...
+Dodatkowo możliwe jest ręczne korzystanie z interfejsu aplikacji dostępnego przez przeglądarkę internetową, co pozwala na zwiększenie liczby generowanych metryk oraz śladów.
 
----
+Po kilku minutach działania aplikacji metryki powinny być widoczne w Grafana Cloud w datasource `grafanacloud-<stack>-prom`.
 
-### 8.2 Przygotowanie danych
+### 8.2 Przygotowanie metryk o wysokiej kardynalności
 
-...
+Standardowe metryki generowane przez OpenTelemetry Demo charakteryzują się stosunkowo niewielką kardynalnością, dlatego w celu przedstawienia problemu optymalizacji metryk przygotowano dodatkowy serwis generujący sztucznie zwiększoną liczbę szeregów czasowych.
 
----
+Serwis wdrażany jest przy użyciu pliku `kubernetes/bad-metrics.yaml`:
+
+```bash
+kubectl apply -f kubernetes/bad-metrics.yaml
+```
+
+Komponent generuje metrykę `bad_requests_total`, która zawiera etykiety `user_id`, `session_id` oraz `product_id`.
+
+Wartości etykiet zmieniają się dynamicznie, powodując powstawanie dużej liczby unikalnych kombinacji etykiet i wzrost liczby szeregów czasowych. Jest to przykład wzorca uznawanego za niezalecany w systemach Prometheus.
+
+### 8.3 Analiza metryk
+
+Po przesłaniu metryk do Grafana Cloud należy przeanalizować ich kardynalność przy użyciu narzędzia Drilldown Metrics oraz funkcjonalności Cardinality Management.
+
+Szczególną uwagę należy zwrócić na metrykę `bad_requests_total`, dla której liczba aktywnych serii rośnie wraz z pojawianiem się nowych identyfikatorów użytkowników i sesji.
+
+### 8.4 Analiza z wykorzystaniem MCP
+
+W ostatnim etapie wykorzystywany jest Grafana MCP Server połączony z klientem LLM.
+
+Model językowy może wykonywać zapytania do Grafana Cloud, analizować metryki oraz identyfikować etykiety odpowiedzialne za wzrost kardynalności. Na podstawie uzyskanych danych model może wskazać potencjalne źródła problemów oraz zaproponować działania optymalizacyjne.
+
 
 ## 9. Opis demo
 
