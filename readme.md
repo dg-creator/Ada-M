@@ -400,9 +400,11 @@ W roli pośrednika wykorzystany zostanie oficjalny **Grafana MCP Server**, dost�
  
 Z punktu widzenia modelu językowego MCP Server udostępnia zestaw narzędzi (w terminologii MCP nazywanych "tools"), pogrupowanych w kategorie. Najistotniejsza z punktu widzenia naszego demo jest kategoria **datasources**, która zawiera narzędzia pozwalające listować źródła danych skonfigurowane w Grafanie oraz wykonywać na nich zapytania, w tym zapytania PromQL do bazy Mimir. Druga ważna kategoria to **dashboards**, umożliwiająca przeszukiwanie istniejących dashboardów oraz pobieranie ich metadanych. Pozostałe kategorie są opcjonalne i mogą być włączane w zależności od potrzeb.
  
-### 5.4.2 OpenAI GPT jako klient MCP
- 
-W roli modelu językowego wybrano **OpenAI GPT**. Model ten obsługuje protokół MCP po stronie klienta, co oznacza, że może odkrywać dostępne narzędzia w MCP Serverze, wybierać te właściwe dla danego zapytania użytkownika i wywoływać je z odpowiednimi parametrami. 
+### 5.4.2 Claude Desktop jako klient MCP
+
+W roli modelu językowego wybrano **Claude Desktop**. Aplikacja obsługuje protokół MCP (Model Context Protocol) po stronie klienta, co umożliwia bezpośrednią komunikację z serwerem Grafana MCP Server. Dzięki temu model może automatycznie wykrywać dostępne narzędzia, wykonywać zapytania do Grafana Cloud oraz analizować metryki i dane telemetryczne zgromadzone w systemie.
+
+Zastosowanie protokołu MCP pozwala modelowi językowemu na wykorzystanie rzeczywistych danych monitorujących zamiast wyłącznie wiedzy zapisanej w modelu. Umożliwia to identyfikację problemów związanych z kardynalnością metryk, analizę wykorzystania zasobów oraz generowanie rekomendacji optymalizacyjnych na podstawie aktualnego stanu środowiska.
  
 ### 5.4.3 Pełny przepływ
  
@@ -411,7 +413,7 @@ Aby zwizualizować całość, prześledźmy ścieżkę pojedynczego zapytania. U
 ```mermaid
 graph LR
     u["Użytkownik"]
-    gpt["OpenAI GPT<br/>(klient MCP)"]
+    gpt["Claude Desktop<br/>(klient MCP)"]
     mcp["Grafana MCP Server"]
     api["Grafana Cloud API"]
     mim["Grafana Mimir /<br/>Adaptive Metrics"]
