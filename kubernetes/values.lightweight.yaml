@@ -1,0 +1,56 @@
+# Lightweight local profile for machines with limited Kubernetes memory.
+# It keeps the metrics pipeline; the full application remains in values.yaml.
+components:
+  accounting:
+    enabled: false
+  ad:
+    enabled: false
+  cart:
+    enabled: false
+  checkout:
+    enabled: false
+  currency:
+    enabled: false
+  email:
+    enabled: false
+  flagd:
+    enabled: false
+  fraud-detection:
+    enabled: false
+  frontend:
+    enabled: false
+  frontend-proxy:
+    enabled: false
+  image-provider:
+    enabled: false
+  kafka:
+    enabled: false
+  llm:
+    enabled: false
+  load-generator:
+    enabled: false
+  payment:
+    enabled: false
+  postgresql:
+    enabled: false
+  product-catalog:
+    enabled: false
+  product-reviews:
+    enabled: false
+  quote:
+    enabled: false
+  recommendation:
+    enabled: false
+  shipping:
+    enabled: false
+  valkey-cart:
+    enabled: false
+
+grafana:
+  enabled: false
+
+jaeger:
+  enabled: false
+
+opensearch:
+  enabled: false
