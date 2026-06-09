@@ -594,41 +594,138 @@ Od tego momentu model LLM ma bezpośredni wgląd w metryki zbierane z Twojego lo
 
 ## 8. Kroki wdrożenia demo
 
-Po zakończeniu instalacji środowiska opisanej w poprzednim rozdziale należy przygotować dane umożliwiające demonstrację problemu wysokiej kardynalności metryk oraz działania mechanizmu Adaptive Metrics.
+Po zakończeniu instalacji środowiska należy przygotować dane umożliwiające demonstrację problemu wysokiej kardynalności metryk oraz działania mechanizmu Adaptive Metrics. W ramach demonstracji wykorzystano lokalny klaster Kubernetes, Prometheus przesyłający dane do Grafana Cloud oraz dodatkowy exporter generujący metrykę o wysokiej kardynalności.
 
-### 8.1 Przygotowanie ruchu aplikacyjnego
+### 8.1 Przygotowanie środowiska
 
-Po uruchomieniu OpenTelemetry Demo należy wygenerować ruch użytkowników w systemie. Wbudowany komponent Load Generator automatycznie symuluje zachowanie klientów sklepu internetowego, generując żądania HTTP pomiędzy mikroserwisami.
+W ramach demonstracji uruchomiono lokalny klaster Kubernetes przy użyciu Minikube. OpenTelemetry Demo zainstalowano za pomocą Helm, natomiast lokalny Prometheus skonfigurowano do przesyłania metryk do Grafana Cloud przez mechanizm `remote_write`.
 
-Dodatkowo możliwe jest ręczne korzystanie z interfejsu aplikacji dostępnego przez przeglądarkę internetową, co pozwala na zwiększenie liczby generowanych metryk oraz śladów.
+Ze względu na ograniczoną ilość pamięci w środowisku lokalnym przygotowano dodatkowy profil konfiguracyjny `kubernetes/values.lightweight.yaml`. Profil ten pozostawia komponenty wymagane do demonstracji metryk, a wyłącza część cięższych elementów przeznaczonych głównie do lokalnej wizualizacji logów i śladów. Pełna konfiguracja projektu pozostaje dostępna w pliku `kubernetes/values.yaml`.
 
-Po kilku minutach działania aplikacji metryki powinny być widoczne w Grafana Cloud w datasource `grafanacloud-<stack>-prom`.
+Instalację w środowisku o ograniczonych zasobach wykonano poleceniem:
+
+```bash
+helm upgrade --install ada-m-demo \
+  open-telemetry/opentelemetry-demo \
+  -f kubernetes/values.yaml \
+  -f kubernetes/values.local.yaml \
+  -f kubernetes/values.lightweight.yaml
+```
+
+Plik `kubernetes/values.local.yaml` zawiera lokalne dane dostępowe do Grafana Cloud i nie jest przechowywany w repozytorium.
+
+Poprawność uruchomienia komponentów można sprawdzić poleceniem:
+
+```bash
+kubectl get pods
+```
+
+W trakcie demonstracji istotne jest, aby działały co najmniej komponenty odpowiedzialne za zbieranie i przesyłanie metryk, w szczególności Prometheus oraz dodatkowy exporter opisany w kolejnym punkcie.
 
 ### 8.2 Przygotowanie metryk o wysokiej kardynalności
 
-Standardowe metryki generowane przez OpenTelemetry Demo charakteryzują się stosunkowo niewielką kardynalnością, dlatego w celu przedstawienia problemu optymalizacji metryk przygotowano dodatkowy serwis generujący sztucznie zwiększoną liczbę szeregów czasowych.
+Standardowe metryki generowane przez OpenTelemetry Demo nie zawsze pozwalają w prosty i kontrolowany sposób pokazać problem wysokiej kardynalności. Dlatego w celu demonstracji przygotowano dodatkowy exporter zdefiniowany w pliku `kubernetes/bad-metrics.yaml`.
 
-Serwis wdrażany jest przy użyciu pliku `kubernetes/bad-metrics.yaml`:
+Exporter wdrażany jest poleceniem:
 
 ```bash
 kubectl apply -f kubernetes/bad-metrics.yaml
 ```
 
-Komponent generuje metrykę `bad_requests_total`, która zawiera etykiety `user_id`, `session_id` oraz `product_id`.
+Komponent generuje licznik `bad_requests_total`. Jest to sztuczna metryka demonstracyjna przygotowana przede wszystkim do pokazania problemu wysokiej kardynalności. Jej nazwa ma charakter umowny i nie oznacza wyłącznie błędnych żądań HTTP, dlatego w etykiecie `status` mogą występować również wartości takie jak `200`.
 
-Wartości etykiet zmieniają się dynamicznie, powodując powstawanie dużej liczby unikalnych kombinacji etykiet i wzrost liczby szeregów czasowych. Jest to przykład wzorca uznawanego za niezalecany w systemach Prometheus.
+Metryka zawiera stabilne etykiety:
 
-### 8.3 Analiza metryk
+* `route`,
+* `status`,
+* `method`,
+* `demo_owner`.
 
-Po przesłaniu metryk do Grafana Cloud należy przeanalizować ich kardynalność przy użyciu narzędzia Drilldown Metrics oraz funkcjonalności Cardinality Management.
+Dodatkowo zawiera etykiety o wysokiej kardynalności:
 
-Szczególną uwagę należy zwrócić na metrykę `bad_requests_total`, dla której liczba aktywnych serii rośnie wraz z pojawianiem się nowych identyfikatorów użytkowników i sesji.
+* `user_id`,
+* `session_id`,
+* `product_id`.
 
-### 8.4 Analiza z wykorzystaniem MCP
+Etykieta `demo_owner` pozwala odróżnić dane generowane przez poszczególnych członków zespołu.
 
-W ostatnim etapie wykorzystywany jest Grafana MCP Server połączony z klientem LLM.
+Wartości identyfikatorów zmieniają się dynamicznie, przez co każda nowa kombinacja etykiet tworzy osobny szereg czasowy. Exporter może wygenerować dużą liczbę takich szeregów, co pozwala zaprezentować problem nadmiernego wzrostu kardynalności metryk.
+
+### 8.3 Weryfikacja metryki w Grafana Cloud
+
+Po uruchomieniu exportera Prometheus wykrywa endpoint `/metrics` na podstawie adnotacji Kubernetes i zbiera metrykę `bad_requests_total`. Następnie dane są przesyłane do Grafana Cloud przy użyciu mechanizmu `remote_write`.
+
+Dostępność metryki w Grafana Cloud można sprawdzić w narzędziu Explore, wybierając datasource Prometheus dla danego stacku Grafana Cloud.
+
+Liczbę odebranych szeregów czasowych można sprawdzić zapytaniem:
+
+```promql
+count(bad_requests_total{demo_owner="user", __ignore_usage__=""})
+```
+
+Zapytanie to służy do diagnostycznego sprawdzenia, czy metryka została przesłana do Grafana Cloud oraz czy liczba szeregów czasowych rośnie.
+
+Pierwszą wizualizację metryki można wykonać przez zsumowanie wartości według stabilnych etykiet:
+
+```promql
+sum by (demo_owner, route, status, method) (
+  bad_requests_total{demo_owner="user"}
+)
+```
+
+![Agregacja metryki bad\_requests\_total](images/bad-requests-aggregation.png)
+
+*Rys. 10: Wizualizacja licznika `bad_requests_total` po agregacji według stabilnych etykiet*
+
+Ponieważ `bad_requests_total` jest licznikiem, do analizy tempa zmian wartości metryki można zastosować funkcję `rate()`:
+
+```promql
+sum by (demo_owner, route, status, method) (
+  rate(bad_requests_total{demo_owner="user", __ignore_usage__=""}[5m])
+)
+```
+
+### 8.4 Konfiguracja Adaptive Metrics
+
+Po potwierdzeniu, że metryka `bad_requests_total` trafia do Grafana Cloud, przeprowadzono konfigurację Adaptive Metrics.
+
+W trakcie testu automatyczne rekomendacje Adaptive Metrics nie zostały wygenerowane. Z tego powodu demonstrację działania mechanizmu przeprowadzono za pomocą ręcznie utworzonej reguły agregacji.
+
+Dla metryki `bad_requests_total` utworzono ręczną regułę agregacji typu `sum`. Reguła agreguje etykiety o wysokiej kardynalności:
+
+* `user_id`,
+* `session_id`,
+* `product_id`.
+
+Pozostawione zostają etykiety potrzebne do analizy działania usługi:
+
+* `demo_owner`,
+* `route`,
+* `status`,
+* `method`.
+
+Pozwala to zachować informację o liczbie i charakterze żądań bez przechowywania osobnego szeregu czasowego dla każdego użytkownika, produktu i sesji.
+
+Po zastosowaniu reguły Grafana Cloud nie pozwala już wykonywać zapytania do metryki `bad_requests_total` bez jawnej agregacji. Przy próbie wykonania surowego zapytania zwracany jest komunikat informujący, że etykiety `product_id`, `session_id` i `user_id` zostały zagregowane. Oznacza to, że reguła Adaptive Metrics została zastosowana do tej metryki.
+
+Poprawne zapytanie po zastosowaniu reguły ma postać:
+
+```promql
+sum by (demo_owner, route, status, method) (
+  bad_requests_total{demo_owner="user"}
+)
+```
+
+Wynik zapytania potwierdza, że metryka pozostaje dostępna w Grafana Cloud, ale jest prezentowana w postaci o niższej kardynalności, zgodnie z utworzoną regułą Adaptive Metrics.
+
+### 8.5 Analiza z wykorzystaniem MCP
+
+W ostatnim etapie demonstracji wykorzystywany jest Grafana MCP Server połączony z klientem LLM.
 
 Model językowy może wykonywać zapytania do Grafana Cloud, analizować metryki oraz identyfikować etykiety odpowiedzialne za wzrost kardynalności. Na podstawie uzyskanych danych model może wskazać potencjalne źródła problemów oraz zaproponować działania optymalizacyjne.
+
+Na obecnym etapie potwierdzono przesyłanie metryki do Grafana Cloud, jej wizualizację oraz konfigurację ręcznej reguły agregacji w Adaptive Metrics. Kolejnym krokiem demonstracji jest wykonanie przez klienta MCP analogicznej analizy i porównanie odpowiedzi modelu z zastosowaną regułą Adaptive Metrics.
+
 
 
 ## 9. Opis demo
