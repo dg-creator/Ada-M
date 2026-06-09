@@ -720,11 +720,25 @@ Wynik zapytania potwierdza, że metryka pozostaje dostępna w Grafana Cloud, ale
 
 ### 8.5 Analiza z wykorzystaniem MCP
 
-W ostatnim etapie demonstracji wykorzystywany jest Grafana MCP Server połączony z klientem LLM.
+Ostatnim etapem demonstracji była analiza metryki `bad_requests_total` z wykorzystaniem Grafana MCP Server oraz klienta Claude Desktop. Ten element odpowiada warstwie interpretacji opisanej w architekturze projektu, w której model językowy uzyskuje dostęp do danych z Grafana Cloud przez MCP.
 
-Model językowy może wykonywać zapytania do Grafana Cloud, analizować metryki oraz identyfikować etykiety odpowiedzialne za wzrost kardynalności. Na podstawie uzyskanych danych model może wskazać potencjalne źródła problemów oraz zaproponować działania optymalizacyjne.
+W kliencie Claude Desktop wykonano zapytanie dotyczące metryki `bad_requests_total`. Model został poproszony o wskazanie etykiet odpowiedzialnych za wysoką kardynalność oraz zaproponowanie możliwego sposobu ograniczenia liczby szeregów czasowych.
 
-Na obecnym etapie potwierdzono przesyłanie metryki do Grafana Cloud, jej wizualizację oraz konfigurację ręcznej reguły agregacji w Adaptive Metrics. Kolejnym krokiem demonstracji jest wykonanie przez klienta MCP analogicznej analizy i porównanie odpowiedzi modelu z zastosowaną regułą Adaptive Metrics.
+Przykładowe zapytanie do modelu:
+
+```text
+Use Grafana MCP. Analyze the Prometheus metric bad_requests_total in Grafana Cloud. Which labels are responsible for high cardinality and what aggregation rule would you suggest?
+```
+
+Model wskazał etykiety `session_id`, `user_id` oraz `product_id` jako główne źródła wysokiej kardynalności. Etykiety `session_id` i `user_id` zostały rozpoznane jako identyfikatory zmieniające się dynamicznie, które mogą prowadzić do szybkiego wzrostu liczby szeregów czasowych. Etykieta `product_id` również została wskazana jako problematyczna ze względu na dużą liczbę możliwych wartości.
+
+Jednocześnie model uznał etykiety `route`, `status` i `method` za stabilne oraz przydatne do dalszej analizy metryki. Zaproponowana przez model optymalizacja polegała na agregacji metryki w taki sposób, aby zachować stabilne etykiety, a usunąć etykiety o wysokiej kardynalności.
+
+Wynik analizy jest zgodny z ręcznie utworzoną regułą Adaptive Metrics, która agreguje etykiety `user_id`, `session_id` oraz `product_id`, pozostawiając etykiety `demo_owner`, `route`, `status` i `method`.
+
+![Analiza metryki z wykorzystaniem MCP](images/mcp-bad-requests-analysis.png)
+
+*Rys. 12: Analiza metryki `bad_requests_total` wykonana w Claude Desktop z wykorzystaniem Grafana MCP Server*
 
 
 
