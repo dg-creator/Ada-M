@@ -487,7 +487,7 @@ Ada-M-project/
 
 Wdrożenie projektu należy przeprowadzić w ściśle określonej kolejności, aby zapewnić prawidłowy przepływ danych ze środowiska lokalnego do chmury i warstwy analitycznej LLM.
 
-**Krok 1**: Przygotowanie klastra lokalnego (k3d lub kind)
+**Krok 1**: Przygotowanie klastra lokalnego (minikube, k3d lub kind)
 
 Instalacja narzędzia k3d odbywa się poleceniem:
 
@@ -548,8 +548,13 @@ helm repo update
 ```
 
 ```bash
-helm install ada-m-demo open-telemetry/opentelemetry-demo -f kubernetes/values.yaml
+helm upgrade --install ada-m-demo \
+ open-telemetry/opentelemetry-demo \
+ -f kubernetes/values.yaml \
+ -f kubernetes/values.local.yaml \
+ -f kubernetes/values.lightweight.yaml
 ```
+Plik `kubernetes/values.local.yaml` zawiera lokalne dane dostępowe do Grafana Cloud i nie jest przechowywany w repozytorium. Plik `kubernetes/values.lightweight.yaml` jest wykorzystywany w środowisku o ograniczonych zasobach i wyłącza część komponentów niezwiązanych bezpośrednio z demonstracją metryk.
 
 Zweryfikuj poprawność uruchomienia wszystkich podów (proces może potrwać kilka minut):
 
@@ -596,23 +601,11 @@ Od tego momentu model LLM ma bezpośredni wgląd w metryki zbierane z Twojego lo
 
 Po zakończeniu instalacji środowiska należy przygotować dane umożliwiające demonstrację problemu wysokiej kardynalności metryk oraz działania mechanizmu Adaptive Metrics. W ramach demonstracji wykorzystano lokalny klaster Kubernetes, Prometheus przesyłający dane do Grafana Cloud oraz dodatkowy exporter generujący metrykę o wysokiej kardynalności.
 
-### 8.1 Przygotowanie środowiska
+### 8.1 Przygotowanie środowiska demonstracyjnego
 
-W ramach demonstracji uruchomiono lokalny klaster Kubernetes przy użyciu Minikube. OpenTelemetry Demo zainstalowano za pomocą Helm, natomiast lokalny Prometheus skonfigurowano do przesyłania metryk do Grafana Cloud przez mechanizm `remote_write`.
+Demonstrację wykonano w środowisku przygotowanym zgodnie z procedurą instalacji opisaną w rozdziale 7. W opisywanym uruchomieniu wykorzystano lokalny klaster Kubernetes oparty o Minikube oraz Prometheus skonfigurowany do przesyłania metryk do Grafana Cloud przez mechanizm `remote_write`.
 
-Ze względu na ograniczoną ilość pamięci w środowisku lokalnym przygotowano dodatkowy profil konfiguracyjny `kubernetes/values.lightweight.yaml`. Profil ten pozostawia komponenty wymagane do demonstracji metryk, a wyłącza część cięższych elementów przeznaczonych głównie do lokalnej wizualizacji logów i śladów. Pełna konfiguracja projektu pozostaje dostępna w pliku `kubernetes/values.yaml`.
-
-Instalację w środowisku o ograniczonych zasobach wykonano poleceniem:
-
-```bash
-helm upgrade --install ada-m-demo \
-  open-telemetry/opentelemetry-demo \
-  -f kubernetes/values.yaml \
-  -f kubernetes/values.local.yaml \
-  -f kubernetes/values.lightweight.yaml
-```
-
-Plik `kubernetes/values.local.yaml` zawiera lokalne dane dostępowe do Grafana Cloud i nie jest przechowywany w repozytorium.
+Ze względu na ograniczoną ilość pamięci w środowisku lokalnym uruchomienie wykonano z dodatkowym profilem `kubernetes/values.lightweight.yaml`. Profil ten pozostawia komponenty wymagane do demonstracji metryk, a wyłącza część cięższych elementów przeznaczonych głównie do lokalnej wizualizacji logów i śladów.
 
 Poprawność uruchomienia komponentów można sprawdzić poleceniem:
 
