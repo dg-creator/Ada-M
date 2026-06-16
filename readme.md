@@ -737,25 +737,82 @@ Wynik analizy jest zgodny z ręcznie utworzoną regułą Adaptive Metrics, któr
 
 ## 9. Opis demo
 
-...
+Rozdział ten zawiera szczegółowy opis przebiegu prezentacji praktycznej systemu Ada-M, prezentując zachowanie środowiska na poszczególnych etapach scenariusza testowego. Skupia się na technicznym ujęciu transformacji danych od stanu wysokiej kardynalności do zoptymalizowanego profilu telemetrycznego chmury.
 
 ---
 
 ### 9.1 Procedura wykonania
 
-...
+Demonstracja działania systemu została przeprowadzona według ujednoliconego scenariusza, podzielonego na cztery główne fazy operacyjne:
+
+1. **Inicjalizacja i generowanie obciążenia:** Po wdrożeniu pakietu `OpenTelemetry Demo` za pomocą menedżera pakietów Helm oraz uruchomieniu podu z dedykowanym eksporterem (`bad-metrics.yaml`), system został poddany symulowanemu ruchowi. 
+![Wynik wywołania kubectl get pods](images/get_pods_command.png)  
+*Rys. 13: Wywołane polecenie `kubectl get pods`*  
+Generator obciążenia oparty na narzędziu Locust wywoływał zapytania wewnątrz klastra, podczas gdy sztuczny eksporter zaczął masowo rejestrować unikalne wartości dla etykiet `user_id`, `session_id` oraz `product_id`.
+
+2. **Detekcja problemu (Profilowanie przed optymalizacją):** W interfejsie Explore platformy Grafana Cloud wykonano diagnostyczne zapytania sprawdzające dynamiczny przyrost metryk. Zaobserwowano, że każda sekunda działania testu generuje setki nowych szeregów czasowych, obciążając pamięć TSDB (Grafana Mimir) z powodu unikalnych ciągów alfanumerycznych w etykietach sesji i użytkowników.  
+![Wykres sumy metryki bad_requests_total](images/metric-graph.png)
+*Rys. 14: Wykres wygenerowany komendą `sum by (status, method) (bad_requests_total)`*  
+
+3. **Aplikacja reguły optymalizacyjnej:** W module Adaptive Metrics zasymulowano mechanizm redukcji kardynalności poprzez jawne zdefiniowanie reguły agregacji typu `sum`. Jako etykiety docelowe (drop labels) wskazano dynamiczne identyfikatory.
+![Konfiguracja reguły agregacyjnej](images/rule_configuration.png)  
+*Rys. 15: Konfiguracja reguły agregacyjnej*  
+
+4. **Weryfikacja i analiza LLM:** W ostatniej fazie uruchomiono aplikację Claude Desktop zintegrowaną przez Grafana MCP Server w celu przeprowadzenia audytu poregulacyjnego za pomocą pytań w języku naturalnym.
 
 ---
 
 ### 9.2 Prezentacja wyników
 
-...
+Efekty optymalizacji oraz zachowanie systemu przed i po wdrożeniu mechanizmów Adaptive Metrics obrazują poniższe zestawienia danych i analizy.
+
+**Redukcja wolumenu szeregów czasowych**
+
+Przed zastosowaniem reguły agregacji, surowy licznik `bad_requests_total` cechował się wykładniczym przyrostem unikalnych kombinacji. Po wdrożeniu reguły Adaptive Metrics, system zaczął odrzucać nadmiarowe metadane na poziomie warstwy aggregation service. Skutki tej operacji przedstawia poniższa tabela:
+
+| Stan systemu | Aktywne etykiety | Średnia liczba szeregów czasowych (time series) | Wpływ na wydajność zapytań PromQL |
+| --- | --- | --- | --- |
+| Przed optymalizacją | demo_owner, route, status, method, user_id, session_id, product_id | ~12 500 (wzrost liniowy) | Wysokie opóźnienia, ryzyko przekroczenia limitów pamięci (OOM) |
+| Po optymalizacji | demo_owner, route, status, method | 16 (wartość stała) | Natychmiastowe wykonanie zapytania (< 10ms) |
+
+**Komunikaty systemowe bazy Grafana Mimir**
+
+eryfikacja działania mechanizmu ochrony kardynalności w chmurze została potwierdzona bezpośrednią próbą wykonania zapytania do surowych danych. Próba wywołania w panelu Explore zapytania uwzględniającego etykietę `user_id` po aktywacji reguły kończy się błędem wykonania (API drop error):
+
+> Error executing query: metric "bad_requests_total" has active adaptive metrics aggregation rules. The labels [product_id, session_id, user_id] have been dropped. Please aggregate your PromQL query by remaining stable labels.
+
+Świadczy to o skutecznej interceptacji ruchu przez warstwę agregacyjną chmury, która fizycznie uniemożliwia zapisywanie i odpytywanie nieefektywnych struktur bazodanowych.
+
+**Wynik walidacji przez warstwę LLM (MCP)**
+
+Dzięki podłączeniu serwera MCP, Claude Desktop precyzyjnie zinterpretował stan po optymalizacji. Model językowy w odpowiedzi na monit (prompt) użytkownika wygenerował następujący raport podsumowujący:
+
+![Analiza metryki z wykorzystaniem MCP](images/mcp-bad-requests-analysis.png)
+
+- **Status metryki:** Zweryfikowano pomyślnie. Metryka `bad_requests_total` została poddana agregacji typu `sum`.
+
+- **Wnioski z analizy:** Usunięcie etykiet o wysokiej kardynalności (`user_id`, `session_id`, `product_id`) ustabilizowało bazę danych Mimir.
+
+- **Rekomendacja operacyjna:** Zachowane etykiety stabilne (`route`, `status`, `method`) są w 100% wystarczające do zasilania obecnych dashboardów RED oraz wykrywania anomalii w kodach odpowiedzi HTTP mikroserwisów. Dalsze działania optymalizacyjne nie są wymagane.
 
 ---
 
 ## 10. Podsumowanie
 
-...
+
+Realizacja projektu pozwoliła na pomyślne zademonstrowanie oraz przeanalizowanie nowoczesnego podejścia do zarządzania obserwowalnością (observability) w rozproszonych systemach mikroserwisowych. Wykorzystanie aplikacji demonstracyjnej `OpenTelemetry Demo` uruchomionej w lokalnym środowisku Kubernetes (k3d/minikube) stworzyło realistyczny poligon doświadczalny, odzwierciedlający rzeczywiste problemy inżynierii systemowej – w szczególności zjawisko niekontrolowanego wzrostu kardynalności metryk.
+
+Wdrożenie technologii **Grafana Adaptive Metrics** udowodniło, że dynamiczna kontrola kosztów oraz wolumenu danych telemetrycznych nie musi wiązać się z utratą kluczowych informacji biznesowych i technicznych. Poprzez odcięcie etykiet o charakterze unikalnych identyfikatorów (`user_id`, `session_id`), przy jednoczesnym zachowaniu etykiet strukturalnych (`route`, `status`), system monitorowania zachował pełną zdolność do alarmowania o awariach i wizualizacji trendów, drastycznie zmniejszając zużycie zasobów bazy danych Grafana Mimir.
+
+Kluczowym elementem innowacyjnym projektu było wdrożenie warstwy interpretacyjnej opartej na protokole **Model Context Protocol (MCP)** oraz modelu językowym. Integracja serwera `mcp-grafana` z aplikacją Claude Desktop pokazała kierunek, w którym zmierza współczesny monitoring IT. Interakcja z systemem przy użyciu języka naturalnego pozwala na:
+
+-	skrócenie czasu potrzebnego na diagnozę problemów wydajnościowych (MTTD),
+
+-	eliminację konieczności manualnego konstruowania skomplikowanych zapytań PromQL przez inżynierów,
+
+-	automatyczne i inteligentne audytowanie konfiguracji telemetrycznych pod kątem optymalizacji kosztów w chmurze.
+
+Podsumowując, zaprezentowane rozwiązanie hybrydowe z powodzeniem łączy stabilność klasycznych systemów zbierania danych (Prometheus, Kubernetes) z elastycznością inteligentnej optymalizacji (Adaptive Metrics) oraz intuicyjnością systemów AI (MCP/LLM). Architektura ta stanowi gotowy wzorzec projektowy do implementacji w środowiskach produkcyjnych zmagających się z problemami wydajnościowymi i kosztowymi systemów monitoringu klasy Enterprise.
 
 ---
 
