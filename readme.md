@@ -35,7 +35,7 @@ W odpowiedzi na te wyzwania rozwijane są narzędzia takie jak Grafana wraz z fu
 
 Dodatkowo zastosowanie modeli językowych (LLM) pozwala na automatyczną analizę danych oraz wspomaganie użytkownika w procesie diagnostyki, umożliwiając bardziej intuicyjną interakcję z systemem.
 
-![Adaptive Metrics Overview](https://github.com/dg-creator/Ada-M/blob/main/images/adaptive-metrics-overview.png)
+![Adaptive Metrics Overview](/images/adaptive-metrics-overview.png)
 *Rys. 1: Przegląd Adaptive Metrics*
 
 ---
@@ -51,7 +51,7 @@ Podstawowymi elementami obserwowalności są:
 
 Połączenie tych elementów pozwala na pełniejsze zrozumienie zachowania systemu oraz znacząco przyspiesza proces identyfikacji i rozwiązywania problemów.
 
-![Observability pillars](https://github.com/dg-creator/Ada-M/blob/main/images/observability-pillars.png)
+![Observability pillars](/images/observability-pillars.png)
 *Rys. 2: Filary obserwowalności*
 
 Przykładem narzędzia wykorzystywanego w ramach obserwowalności jest **Prometheus**, który realizuje model typu *pull*. Jego zadaniem jest cykliczne zbieranie metryk z monitorowanych usług poprzez dedykowane endpointy, najczęściej dostępne pod adresem /metrics. Zebrane dane są następnie przechowywane w bazie szeregów czasowych (TSDB) i mogą być analizowane przy użyciu języka zapytań PromQL. Prometheus integruje się również z systemami wizualizacji, takimi jak Grafana, umożliwiając prezentację danych w formie dashboardów.
@@ -68,7 +68,7 @@ W kontekście platformy Grafana funkcjonalność ta realizowana jest przez **Gra
 
 **Model Context Protocol (MCP)** stanowi koncepcyjną warstwę umożliwiającą integrację modeli językowych z zewnętrznymi narzędziami i systemami. Pozwala on na ujednolicenie komunikacji pomiędzy LLM a źródłami danych, takimi jak systemy monitoringu.
 
-![Project scheme](https://github.com/dg-creator/Ada-M/blob/main/images/project-scheme.png)
+![Project scheme](/images/project-scheme.png)
 *Rys. 3: Koncepcyjny schemat architektury projektu (na podstawie materiałów dydaktycznych)*
 
 ---
@@ -140,133 +140,8 @@ Wokół tego rdzenia funkcjonalnego krążą usługi wspomagające. `recommendat
  
 Aby aplikacja generowała ruch nawet bez udziału użytkownika, w jej skład wchodzi `load-generator`, czyli generator obciążenia oparty o narzędzie Locust, który symuluje zachowania użytkowników (przeglądanie produktów, dodawanie do koszyka, finalizowanie zakupów). Ponadto występuje `flagd`, czyli usługa zarządzająca flagami funkcjonalności. Pozwala ona w trakcie działania systemu włączać i wyłączać określone zachowania, w tym celowo wywoływać awarie.
 
-```mermaid
-graph TD
-subgraph Service Diagram
-accounting(Accounting):::dotnet
-ad(Ad):::java
-cache[(Cache<br/>&#40Valkey&#41)]
-cart(Cart):::dotnet
-checkout(Checkout):::golang
-currency(Currency):::cpp
-email(Email):::ruby
-flagd(Flagd):::golang
-flagd-ui(Flagd-ui):::elixir
-fraud-detection(Fraud Detection):::kotlin
-frontend(Frontend):::typescript
-frontend-proxy(Frontend Proxy <br/>&#40Envoy&#41):::cpp
-image-provider(Image Provider <br/>&#40nginx&#41):::cpp
-llm(LLM):::python
-load-generator([Load Generator]):::python
-payment(Payment):::javascript
-product-catalog(Product Catalog):::golang
-product-reviews(Product Reviews):::python
-quote(Quote):::php
-recommendation(Recommendation):::python
-shipping(Shipping):::rust
-queue[(queue<br/>&#40Kafka&#41)]:::java
-react-native-app(React Native App):::typescript
-postgresql[(Database<br/>&#40PostgreSQL&#41)]
-
-accounting ---> postgresql
-
-ad ---->|gRPC| flagd
-
-checkout -->|gRPC| currency
-checkout -->|gRPC| cart
-checkout -->|TCP| queue
-
-cart --> cache
-cart -->|gRPC| flagd
-
-checkout -->|gRPC| payment
-checkout --->|HTTP| email
-checkout -->|gRPC| product-catalog
-checkout -->|HTTP| shipping
-
-fraud-detection -->|gRPC| flagd
-
-frontend -->|gRPC| ad
-frontend -->|gRPC| currency
-frontend -->|gRPC| cart
-frontend -->|gRPC| checkout
-frontend -->|HTTP| shipping
-frontend ---->|gRPC| recommendation
-frontend -->|gRPC| product-catalog
-frontend -->|gRPC| product-reviews
-
-frontend-proxy -->|gRPC| flagd
-frontend-proxy -->|HTTP| frontend
-frontend-proxy -->|HTTP| flagd-ui
-frontend-proxy -->|HTTP| image-provider
-
-llm -->|gRPC| flagd
-llm ---> product-reviews
-
-payment -->|gRPC| flagd
-
-product-reviews -->|gRPC| flagd
-product-reviews -->|gRPC| product-catalog
-product-reviews -->|gRPC| llm
-product-reviews ---> postgresql
-
-queue -->|TCP| accounting
-queue -->|TCP| fraud-detection
-
-recommendation -->|gRPC| flagd
-recommendation -->|gRPC| product-catalog
-
-shipping -->|HTTP| quote
-
-Internet -->|HTTP| frontend-proxy
-load-generator -->|HTTP| frontend-proxy
-react-native-app -->|HTTP| frontend-proxy
-end
-
-classDef dotnet fill:#178600,color:white;
-classDef cpp fill:#f34b7d,color:white;
-classDef elixir fill:#b294bb,color:black;
-classDef golang fill:#00add8,color:black;
-classDef java fill:#b07219,color:white;
-classDef javascript fill:#f1e05a,color:black;
-classDef kotlin fill:#560ba1,color:white;
-classDef php fill:#4f5d95,color:white;
-classDef python fill:#3572A5,color:white;
-classDef ruby fill:#701516,color:white;
-classDef rust fill:#dea584,color:black;
-classDef typescript fill:#e98516,color:black;
-```
-
-```mermaid
-graph LR
-subgraph Service Legend
-  dotnetsvc(.NET):::dotnet
-  cppsvc(C++):::cpp
-  elixirsvc(Elixir):::elixir
-  golangsvc(Go):::golang
-  javasvc(Java):::java
-  javascriptsvc(JavaScript):::javascript
-  kotlinsvc(Kotlin):::kotlin
-  phpsvc(PHP):::php
-  pythonsvc(Python):::python
-  rubysvc(Ruby):::ruby
-  rustsvc(Rust):::rust
-  typescriptsvc(TypeScript):::typescript
-end
-
-classDef dotnet fill:#178600,color:white;
-classDef cpp fill:#f34b7d,color:white;
-classDef elixir fill:#b294bb,color:black;
-classDef golang fill:#00add8,color:black;
-classDef java fill:#b07219,color:white;
-classDef javascript fill:#f1e05a,color:black;
-classDef kotlin fill:#560ba1,color:white;
-classDef php fill:#4f5d95,color:white;
-classDef python fill:#3572A5,color:white;
-classDef ruby fill:#701516,color:white;
-classDef rust fill:#dea584,color:black;
-classDef typescript fill:#e98516,color:black;
-```
+![OpenTelemetry Demo Diagram](images/opentelemetry-demo-diagram.png)
+![OpenTelemetry Demo Legend](images/opentelemetry-demo-legend.png)
 
 *Rys. 5: Architektura demonstracyjna OpenTelemetry Demo [2]* 
 
@@ -274,27 +149,7 @@ classDef typescript fill:#e98516,color:black;
  
 Mikroserwisy same w sobie nie wysyłają metryk bezpośrednio do Prometheusa czy Grafany. Zamiast tego każdy z nich raportuje dane do centralnego komponentu zwanego **OpenTelemetry Collector**, który stanowi element pakietu OpenTelemetry Demo. Collector pełni rolę koncentratora, który przyjmuje telemetrię ze wszystkich usług, przetwarza ją i przekazuje dalej do odpowiednich systemów docelowych.
 
-```mermaid
-graph LR
-    ms(Microservice)
-    ms -.->|"OTLP gRPC"| oc-grpc
-    ms -.->|"OTLP HTTP"| oc-http
-    subgraph oc[OTel Collector]
-        style oc fill:#97aef3,color:black;
-        oc-grpc[/"OTLP Receiver<br/>:4317"/]
-        oc-http[/"OTLP Receiver<br/>:4318"/]
-        oc-proc(Processors)
-        oc-spanmetrics[/"Span Metrics<br/>Connector"/]
-        oc-prom[/"OTLP HTTP<br/>Exporter"/]
-        oc-grpc --> oc-proc
-        oc-http --> oc-proc
-        oc-proc --> oc-spanmetrics
-        oc-proc --> oc-prom
-        oc-spanmetrics --> oc-prom
-    end
-    oc-prom -->|"/api/v1/otlp"| pr[/"Prometheus"/]
-    style pr fill:#e75128,color:black;
-```
+![OpenTelemetry Collector Flow](images/opentelemetry-collector.png)
 
 *Rys. 6: Przepływ telemetrii przez OpenTelemetry Collector [2]* 
 
@@ -362,32 +217,8 @@ Aby uporządkować wszystkie powyższe informacje, prześledźmy drogę pojedync
 
 Z Mimira dane są następnie czytane przez trzy różne komponenty. Interfejs Grafana wykorzystuje je do renderowania dashboardów i odpowiadania na zapytania użytkowników. Recommendations service skanuje je, by aktualizować swoje rekomendacje co do agregacji. A nasz MCP Server, opisany w kolejnej sekcji, wykonuje na nich zapytania PromQL, by dostarczyć odpowiedzi modelowi językowemu.
 
-```mermaid
-graph LR
-    pr[/"Prometheus<br/>(remote_write)"/]
-    
-    subgraph gc[Grafana Cloud]
-        agg["Aggregation<br/>service"]
-        mim[("Grafana<br/>Mimir")]
-        rec["Recommendations<br/>service"]
-        ui["Interfejs<br/>Grafana"]
-        
-        agg -->|"aktywne reguły<br/>agregacji"| mim
-        mim --> ui
-        mim --> rec
-    end
-    
-    pr -->|"metryki"| agg
-    
-    mcp["MCP Server"]
-    mim -->|"PromQL"| mcp
-    
-    style pr fill:#e75128,color:black;
-    style mim fill:#f8b91e,color:black;
-    style agg fill:#c77dff,color:black;
-    style rec fill:#c77dff,color:black;
-    style mcp fill:#97aef3,color:black;
-```
+![Grafana Cloud Visualization Layer Flow](images/flow-visualization-layer-grafanacloud.png)
+
 *Rys. 8: Przepływ metryk w warstwie wizualizacji Grafana Cloud*
 
 ## 5.4 Warstwa interpretacji
@@ -409,23 +240,8 @@ Zastosowanie protokołu MCP pozwala modelowi językowemu na wykorzystanie rzeczy
 ### 5.4.3 Pełny przepływ
  
 Aby zwizualizować całość, prześledźmy ścieżkę pojedynczego zapytania. Użytkownik wpisuje pytanie w języku naturalnym do interfejsu rozmowy z modelem GPT. Model analizuje zapytanie i decyduje, że potrzebuje danych z Grafany. W związku z tym wykonuje wywołanie narzędzia MCP, które przekazywane jest do Grafana MCP Server działającego lokalnie. MCP Server konstruuje odpowiednie żądanie HTTP do API Grafana Cloud i  wysyła je przez internet. Grafana Cloud wykonuje zapytanie — zazwyczaj PromQL na bazie Mimir albo odczyt konfiguracji Adaptive Metrics — i zwraca wynik w formacie JSON. MCP Server odbiera ten wynik, formatuje go zgodnie ze specyfikacją MCP i zwraca modelowi. Model GPT odbiera dane, interpretuje je w kontekście oryginalnego pytania i konstruuje odpowiedź w języku naturalnym, która zostaje wyświetlona użytkownikowi.
- 
-```mermaid
-graph LR
-    u["Użytkownik"]
-    gpt["Claude Desktop<br/>(klient MCP)"]
-    mcp["Grafana MCP Server"]
-    api["Grafana Cloud API"]
-    mim["Grafana Mimir /<br/>Adaptive Metrics"]
-    
-    u -->|"1. zapytanie<br/>w j. naturalnym"| gpt
-    gpt -->|"2. tool call<br/>(JSON-RPC)"| mcp
-    mcp -->|"3. HTTP request"| api
-    api -->|"4. PromQL"| mim
-    mim -.->|"5. wynik (JSON)"| mcp
-    mcp -.->|"6. tool result"| gpt
-    gpt -.->|"7. odpowiedź<br/>w j. naturalnym"| u
-```
+
+![Przepływ w warstwie interpretacji](images/interpretation-layer-flow.png)
 
 *Rys. 9: Przepływ zapytania w warstwie interpretacji*
 
